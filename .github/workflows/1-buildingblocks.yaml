@@ -1,0 +1,22 @@
+name: first workflow
+
+on: push
+
+jobs:
+  first-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: first step
+        run: echo "this is the first step that will be executed"
+
+  second-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: second step
+        run: |
+          echo "this will be a multi-line command where one of them should be executed"
+          exit 1
+      - name: third step
+        run: echo "this step will not be executed because the previous step failed"
+               
+    
