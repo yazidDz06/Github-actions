@@ -1,6 +1,16 @@
 name: workflow events
 
-on: push
+on: 
+    push :
+    pull_request :
+    schedule: 
+        - cron: '0 0 * * *'  #cron expression can be found here: https://crontab.guru/
+    workflow_dispatch:
+        inputs:
+            logLevel:
+                description: 'Log level'
+                required: true
+                default: 'warning'
 
 jobs:
   first-job:
