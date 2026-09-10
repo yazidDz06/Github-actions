@@ -1,7 +1,12 @@
 name: workflow events
 
 on: 
-    push :
+    push : 
+        branches:
+            - main
+                 
+        paths-ignore:
+            - "/src/docs/**"  #ceci pour ignorer les changements dans le dossier docs par exemple 
     pull_request :
     schedule: 
         - cron: '0 0 * * *'  #cron expression can be found here: https://crontab.guru/
