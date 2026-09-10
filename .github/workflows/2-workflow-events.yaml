@@ -1,0 +1,10 @@
+name: workflow events
+
+on: push
+
+jobs:
+  first-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: first step
+        run: echo "this is will execute an event which is ${{github.event_name}}"
