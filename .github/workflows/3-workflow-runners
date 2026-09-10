@@ -1,0 +1,12 @@
+name: workflow runners
+
+on: push
+
+jobs:
+  runner-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: print runner
+        run: |
+           echo "this is on ubuntu server"
+           echo "this is executed on ${{env.RUNNER_OS}} runner"
