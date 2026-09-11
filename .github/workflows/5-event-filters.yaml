@@ -1,4 +1,4 @@
-name: workflow events
+name: workflow event filters and types
 
 on: 
   pull_request: 
