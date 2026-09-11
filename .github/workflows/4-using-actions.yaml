@@ -1,0 +1,35 @@
+name: using prebuilt actions
+
+on: 
+    push : 
+        branches:
+            - main
+
+jobs:
+    
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      #0- we will choose the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      #1 - setup nodejs environment
+      - name: setup node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.x'
+
+
+      #2 - install dependencies for a react app example
+      - name: Install dependencies
+        run: npm install
+
+      #3 - run the tests
+      - name: Run tests
+        run: npm test
+
+      #4 - build the app
+      - name: Build the app
+        run: npm run build
