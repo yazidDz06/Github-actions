@@ -12,7 +12,7 @@ jobs:
     defaults:
         run:
 
-          working-directory: github-actions/react-app
+          working-directory: github-actions/react-app/my-app
 
     steps:
       #0- we will choose the repository
