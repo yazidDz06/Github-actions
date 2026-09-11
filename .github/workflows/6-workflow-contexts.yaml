@@ -1,0 +1,198 @@
+name: workflow contexts
+run-name: workflow contexts - inputs exists ? ${{ inputs.dry-run }}
+
+# You read them with the expression syntax:  ${{ <context>.<property> }}
+
+# PRO TIP: not every context is available everywhere. For example `secrets`
+#   and `env` can NOT be used in a job-level `if:`.
+
+
+on:
+  push:
+  # workflow_dispatch lets you run the workflow by hand from the Actions tab and
+  # gives you the `inputs` context (see below)
+  workflow_dispatch:
+    inputs: #provides two inputs, one is greeting another is dry run which is a checkbox
+      greeting:
+        description: "text typed by the person who triggers the workflow manually"
+        type: string
+        default: "hello from inputs"
+      dry-run:
+        description: "boolean input, stays a real boolean in the inputs context"
+        type: boolean
+        default: false
+
+# `env` at the WORKFLOW level  visible in every job and every step
+env:
+  WORKFLOW_LEVEL_VAR: "I was defined at workflow level"
+
+jobs:
+
+  # JOB 1 : github, env, vars, secrets, runner, inputs, steps, job
+  
+  contexts-job:
+    runs-on: ubuntu-latest
+
+    # `env` at the JOB level -> visible only in this job, overrides workflow level
+    env:
+      JOB_LEVEL_VAR: "I was defined at job level"
+
+    # job outputs are how you expose values to OTHER jobs (read with `needs`)
+    outputs:
+      build-version: ${{ steps.set-version.outputs.version }}
+
+    steps:
+      
+      - name: github context
+        run: |
+          echo "event name  : ${{ github.event_name }}"      # push, pull_request, workflow_dispatch...
+          echo "repository  : ${{ github.repository }}"      # owner/repo
+          echo "actor       : ${{ github.actor }}"           # user who triggered the run
+          echo "ref         : ${{ github.ref }}"             # refs/heads/main
+          echo "ref name    : ${{ github.ref_name }}"        # main  (short version, nicer for tags / docker images)
+          echo "sha         : ${{ github.sha }}"             # commit that triggered the run
+          echo "run id      : ${{ github.run_id }}"          # unique id of this run
+          echo "run number  : ${{ github.run_number }}"      # incremental number, handy for build versions
+          echo "workspace   : ${{ github.workspace }}"       # folder where your repo is checked out
+          echo "server url  : ${{ github.server_url }}"
+
+      # `github.event` is the full webhook payload of the event, its content
+      # changes depending on the event (push, pull_request, issues...).
+      # Dump it once to discover what you can use.
+      - name: github.event payload
+        # PRO TIP: never put user controlled values (commit message, PR title,
+        # issue body...) directly inside `run:`  script injection risk.
+        # Pass them through `env:` and use the shell variable instead.
+        env:
+          EVENT_JSON: ${{ toJSON(github.event) }}
+        run: echo "$EVENT_JSON"
+
+   
+      # env context : environment variables defined at workflow, job or step
+      # level. Priority is step > job > workflow.
+     
+      - name: env context
+        env:
+          STEP_LEVEL_VAR: "I was defined at step level"
+        run: |
+          # inside `run:` you can simply use the shell variable ($NAME)...
+          echo "$WORKFLOW_LEVEL_VAR"
+          echo "$JOB_LEVEL_VAR"
+          echo "$STEP_LEVEL_VAR"
+          # ...the env.NAME expression form is only needed OUTSIDE of `run:` (with:, if:, name:...)
+          # PRO TIP: expressions are expanded EVERYWHERE in `run:`, even inside shell comments
+          echo "${{ env.STEP_LEVEL_VAR }}"
+
+      # PRO TIP: to create an env var dynamically for ALL the next steps of the
+      # job, write "NAME=value" to the special $GITHUB_ENV file.
+      - name: create a dynamic env var
+        run: echo "DYNAMIC_VAR=created at runtime" >> "$GITHUB_ENV"
+
+      - name: read the dynamic env var
+        run: echo "$DYNAMIC_VAR"
+
+     
+      # vars context : configuration variables (NOT sensitive) defined in
+      # Settings > Secrets and variables > Actions > Variables.
+      # Can be defined at repository, organization or environment level.
+      
+      - name: vars context
+        run: |
+          echo "config variable : ${{ vars.MY_CONFIG_VAR }}"   # empty if not defined in the settings
+
+     
+      # secrets context : encrypted values defined in
+      # Settings > Secrets and variables > Actions > Secrets.
+      # GITHUB_TOKEN is automatically created by GitHub for every run.
+    
+      - name: secrets context
+        # PRO TIP: pass secrets through `env:` and use $VAR in the script
+        # instead of writing ${{ secrets.X }} directly in the command line
+        env:
+          MY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MY_SECRET: ${{ secrets.MY_SECRET }}
+        run: |
+          # secrets are automatically masked in the logs  printed as ***
+          echo "token  : $MY_TOKEN"
+          echo "secret : $MY_SECRET"
+
+      
+      # runner context : information about the machine running the job
+    
+      - name: runner context
+        run: |
+          echo "os         : ${{ runner.os }}"          # Linux, Windows, macOS
+          echo "arch       : ${{ runner.arch }}"        # X64, ARM64...
+          echo "name       : ${{ runner.name }}"
+          echo "temp       : ${{ runner.temp }}"        # temp folder, cleaned at the end of the job
+          echo "tool cache : ${{ runner.tool_cache }}"  # where setup-node / setup-python cache their tools
+
+      # PRO TIP: `runner.os` is perfect to run a step only on a given OS when
+      # you use an OS matrix
+      - name: only on linux
+        if: runner.os == 'Linux'
+        run: echo "I only run on Linux runners"
+
+      # --------------------------------------------------------------------
+      # inputs context : values given to `workflow_dispatch` (manual run) or
+      # `workflow_call` (reusable workflow).
+      # --------------------------------------------------------------------
+      - name: inputs context
+        # only run this step when the workflow was triggered manually,
+        # otherwise every input is empty
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "greeting : ${{ inputs.greeting }}"
+          echo "dry-run  : ${{ inputs.dry-run }}"
+      # PRO TIP: `github.event.inputs.greeting` also works but every value is a
+      # string there, `inputs` keeps the real type (boolean, number).
+
+      # --------------------------------------------------------------------
+      # steps context : outputs and status of the PREVIOUS steps of the SAME
+      # job. The step must have an `id` to be referenced.
+      # --------------------------------------------------------------------
+      - name: set an output
+        id: set-version
+        # outputs are created by writing "name=value" to the $GITHUB_OUTPUT file
+        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: a step that fails but does not stop the job
+        id: failing-step
+        continue-on-error: true
+        run: exit 1
+
+      - name: steps context
+        run: |
+          echo "version output      : ${{ steps.set-version.outputs.version }}"
+          echo "set-version outcome : ${{ steps.set-version.outcome }}"     # success
+          # PRO TIP: `outcome` is the real result of the step, `conclusion` is
+          # the result AFTER continue-on-error is applied
+          echo "failing outcome     : ${{ steps.failing-step.outcome }}"     # failure
+          echo "failing conclusion  : ${{ steps.failing-step.conclusion }}"  # success
+
+      # --------------------------------------------------------------------
+      # job context : information about the job currently running
+      # --------------------------------------------------------------------
+      - name: job context
+        # PRO TIP: combine `always()` with job.status to send a notification
+        # whatever the result of the job is
+        if: always()
+        run: |
+          echo "status : ${{ job.status }}"   # success, failure or cancelled
+          # job.container and job.services also exist, but only when the job
+          # runs inside a container / uses service containers
+
+  # JOB 2 : needs
+
+  needs-job:
+    runs-on: ubuntu-latest
+    # `needs` makes this job wait for contexts-job and gives access to its
+    # outputs and result through the `needs` context
+    needs: contexts-job
+    steps:
+      - name: needs context
+        run: |
+          echo "result of contexts-job   : ${{ needs.contexts-job.result }}"   # success, failure, cancelled, skipped
+          echo "version from contexts-job: ${{ needs.contexts-job.outputs.build-version }}"
+
+ 
