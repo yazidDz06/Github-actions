@@ -28,7 +28,7 @@ jobs:
 
       #2 - install dependencies for a react app example
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         
 
       #3 - run the tests
