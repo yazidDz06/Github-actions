@@ -9,6 +9,10 @@ jobs:
     
   build-and-test:
     runs-on: ubuntu-latest
+    defaults:
+        run:
+
+          working-directory: github-actions/react-app
 
     steps:
       #0- we will choose the repository
@@ -25,6 +29,7 @@ jobs:
       #2 - install dependencies for a react app example
       - name: Install dependencies
         run: npm install
+        
 
       #3 - run the tests
       - name: Run tests
@@ -33,3 +38,4 @@ jobs:
       #4 - build the app
       - name: Build the app
         run: npm run build
+        
