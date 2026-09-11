@@ -1,0 +1,46 @@
+name: workflow variables
+
+on: push
+
+# workflow-level variables: available in every job and every step of this workflow
+env:
+  APP_NAME: "my-app"
+  LOG_LEVEL: "info"   # will be overridden at the job level below
+
+jobs:
+  variables:
+    runs-on: ubuntu-latest
+    # job-level variables: only in this job, same name overrides the workflow level
+    env:
+      LOG_LEVEL: "debug"
+      JOB_VAR: "defined at job level"
+    steps:
+      # default variables: created by GitHub for every run, nothing to declare
+      - name: default variables
+        run: |
+          echo "repository : $GITHUB_REPOSITORY"   # owner/repo
+          echo "branch     : $GITHUB_REF_NAME"
+          echo "commit     : $GITHUB_SHA"
+          echo "runner os  : $RUNNER_OS"           # default vars are shell vars only, not reachable through the env context
+
+      # custom variables: use $NAME inside run:, use the env context everywhere else (with:, if:, name:)
+      - name: custom variables
+        run: |
+          echo "app name  : $APP_NAME"              # from workflow level
+          echo "job var   : $JOB_VAR"               # from job level
+          echo "log level : ${{ env.LOG_LEVEL }}"   # debug -> job level wins over workflow level
+
+      # step-level variables: only for this step, highest priority (step > job > workflow)
+      - name: overriding
+        env:
+          LOG_LEVEL: "trace"
+        run: |
+          echo "log level : $LOG_LEVEL"                 # trace -> step level wins
+          echo "APP_NAME=my-app-v2" >> "$GITHUB_ENV"    # dynamic variable: creates or overrides a var for all the FOLLOWING steps
+
+      # configuration variables: defined in Settings > Secrets and variables > Actions > Variables
+      - name: configuration and dynamic variables
+        run: |
+          echo "app name  : $APP_NAME"                  # my-app-v2 -> the value written to $GITHUB_ENV
+          echo "log level : $LOG_LEVEL"                 # back to debug, the step-level override only lived in its step
+          echo "config    : ${{ vars.MY_CONFIG_VAR }}"  # empty if not set; environment > repository > organization when the name exists at several levels

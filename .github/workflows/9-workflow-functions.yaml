@@ -1,0 +1,64 @@
+name: workflow functions
+
+on:
+  - push
+  - workflow_dispatch
+
+jobs:
+  general-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # needed by hashFiles, it reads the files of the workspace
+
+      # string functions: comparisons are case-insensitive
+      - name: string functions
+        run: |
+          echo "${{ contains('Hello World', 'world') }}"                        # true -> search inside a string
+          echo "${{ contains(fromJSON('["main", "dev"]'), github.ref_name) }}"  # contains also works with arrays
+          echo "${{ startsWith(github.ref, 'refs/heads/') }}"                   # true when the run comes from a branch
+          echo "${{ endsWith('report.pdf', '.pdf') }}"                          # true
+          echo "${{ format('{0}-{1}-{2}', github.repository, github.run_number, github.sha) }}"   # build a string with {n} placeholders
+
+      # json functions: convert between objects and strings
+      - name: json functions
+        env:
+          REPO_JSON: ${{ toJSON(github.event.repository) }}   # toJSON: object -> pretty printed string, great for debugging
+        run: |
+          echo "$REPO_JSON"
+          echo "${{ fromJSON('{"name": "app", "version": 2}').version }}"   # fromJSON: string -> object, then read its properties
+
+      # join: array -> string, the .* notation collects one property from every item of a list
+      - name: join
+        run: echo "${{ join(github.event.commits.*.message, ' | ') }}"   # all commit messages of the push, empty on workflow_dispatch
+
+      # hashFiles: sha256 of the matching files, changes only when the files change -> perfect for cache keys
+      - name: hashFiles
+        run: echo "${{ hashFiles('**/package-lock.json') }}"
+
+  status-functions:
+    runs-on: ubuntu-latest
+    steps:
+      # success() is the implicit default of every step without an if:
+      - name: executed function
+        if: ${{ success() }}
+        run: echo "i will be executed if success"
+
+      - name: failing step
+        run: |
+          echo "this step will fail"
+          exit 1
+
+      # failure(): true when a previous step of the job failed
+      - name: on failure
+        if: failure()
+        run: echo "a previous step failed"
+
+      # always(): runs even after a failure or a cancel -> cleanup, upload logs, notifications
+      - name: always
+        if: always()
+        run: echo "i always run"
+
+      # cancelled(): true only when the run was cancelled from the UI or the API
+      - name: on cancel
+        if: cancelled()
+        run: echo "the workflow was cancelled"
