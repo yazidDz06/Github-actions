@@ -17,7 +17,7 @@ jobs:
           echo "${{ contains(fromJSON('["main", "dev"]'), github.ref_name) }}"  # contains also works with arrays
           echo "${{ startsWith(github.ref, 'refs/heads/') }}"                   # true when the run comes from a branch
           echo "${{ endsWith('report.pdf', '.pdf') }}"                          # true
-          echo "${{ format('{0}-{1}-{2}', github.repository, github.run_number, github.sha) }}"   # build a string with {n} placeholders
+          echo "${{ format('{0}-{1}-{2}', github.repository, github.run_number, github.sha,) }}"   # build a string with {n} placeholders
 
       # json functions: convert between objects and strings
       - name: json functions
