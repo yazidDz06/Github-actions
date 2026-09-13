@@ -1,10 +1,12 @@
 name: React App CI
 
 on:
-  push:
-    branches: main
-  pull_request:
-    branches:  main
+  workflow_dispatch: 
+    inputs:
+        cache:
+         description: "added packages so we will se how cache works and how it can improve workflow execution" 
+         type: boolean
+         default: false  
 
 jobs:
   build:
