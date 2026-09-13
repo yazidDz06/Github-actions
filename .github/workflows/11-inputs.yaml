@@ -1,0 +1,67 @@
+name: workflow inputs
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        type: string
+        required: true
+        description: "name to greet (required, no default)"
+      greeting:
+        type: string
+        required: false
+        default: "Hello"
+        description: "greeting word to use"
+      repeat:
+        type: number
+        default: 1
+        description: "how many times to print the greeting"
+      shout:
+        type: boolean
+        default: false
+        description: "print the greeting in upper case"
+      environment:
+        type: choice
+        default: dev
+        description: "target environment"
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  show-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: print all inputs as json
+        run: echo '${{ toJSON(inputs) }}'
+
+      - name: print each input individually
+        run: |
+          echo "username:    ${{ inputs.username }}"
+          echo "greeting:    ${{ inputs.greeting }}"
+          echo "repeat:      ${{ inputs.repeat }}"
+          echo "shout:       ${{ inputs.shout }}"
+          echo "environment: ${{ inputs.environment }}"
+
+  greet:
+    runs-on: ubuntu-latest
+    needs: show-inputs
+    steps:
+      - name: greet the user
+        run: |
+          msg="${{ inputs.greeting }}, ${{ inputs.username }}!"
+          if [ "${{ inputs.shout }}" = "true" ]; then
+            msg=$(echo "$msg" | tr '[:lower:]' '[:upper:]')
+          fi
+          for i in $(seq 1 ${{ inputs.repeat }}); do
+            echo "$msg"
+          done
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: greet
+    if: inputs.environment == 'prod'
+    steps:
+      - name: deploy only when prod is chosen
+        run: echo "deploying to ${{ inputs.environment }}"
