@@ -1,0 +1,45 @@
+name: artifacts workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: produce some files (in a real app this would be `npm run build`)
+      - name: Generate build output
+        run: |
+          mkdir -p dist
+          echo "<h1>hello from run ${{ github.run_number }}</h1>" > dist/index.html
+          echo "built at $(date -u)" > dist/build-info.txt
+
+      # Step 2: upload the folder as an artifact so other jobs (and humans) can get it
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # Step 3: this job runs on a fresh machine, dist/ does not exist here...
+      - name: Show workspace before download
+        run: ls -la
+
+      # Step 4: ...so we download the artifact produced by the build job
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+      # Step 5: now the files are available and we can use them
+      - name: Use the downloaded files
+        run: |
+          ls -la dist/
+          cat dist/index.html
+          cat dist/build-info.txt

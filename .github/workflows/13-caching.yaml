@@ -2,11 +2,7 @@ name: cache workflow
 
 on:
   workflow_dispatch: 
-    inputs:
-        cache:
-         description: "added packages so we will se how cache works and how it can improve workflow execution" 
-         type: boolean
-         default: false  
+   
 
 jobs:
   build:
@@ -21,7 +17,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 20
 
       # Step 3: Cache npm dependencies
       - name: Cache npm modules
