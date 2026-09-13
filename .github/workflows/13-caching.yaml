@@ -1,0 +1,46 @@
+name: React App CI
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches:  main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      # Step 3: Cache npm dependencies
+      - name: Cache npm modules
+        uses: actions/cache@v4
+        with:
+          # Paths to cache: npm global cache and local node_modules
+          path: |
+            ~/.npm
+            react-app/my-app/node_modules
+          # Unique key based on OS and package-lock.json changes (we will use the cache if package-lock.json hasn't changed)
+          key: ${{ runner.os }}-node-${{ hashFiles('react-app/my-app/package-lock.json') }}
+          # Fallback keys to restore partial cache if package-lock changed
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Step 4: Install dependencies (uses cache if available)
+      - name: Install dependencies
+        working-directory: react-app/my-app
+        run: npm ci
+
+      # Step 5: Build the React application
+      - name: Build application
+        working-directory: react-app/my-app
+        run: npm run build
