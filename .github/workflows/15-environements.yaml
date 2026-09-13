@@ -1,0 +1,66 @@
+name: environments
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# the same commit is promoted dev -> staging -> prod
+# protection rules (required reviewers, wait timer, allowed branches)
+# are configured in Settings > Environments, not here
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: build
+        run: echo "building commit ${{ github.sha }}"
+
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: dev
+      url: https://dev.example.com
+    steps:
+      - name: deploy to dev
+        run: |
+          echo "deploying to dev"
+          # secrets / vars are resolved from the dev environment
+          echo "API_URL is '${{ vars.API_URL }}'"
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    steps:
+      - name: run e2e tests against dev
+        run: echo "running e2e tests on https://dev.example.com"
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    # only if e2e tests passed
+    needs: e2e-tests
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - name: deploy to staging
+        run: |
+          echo "deploying to staging"
+          echo "API_URL is '${{ vars.API_URL }}'"
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    # only if e2e tests passed AND staging deployment succeeded
+    # the job then pauses until a required reviewer approves it (github ui)
+    needs:
+      - e2e-tests
+      - deploy-staging
+    environment:
+      name: prod
+      url: https://example.com
+    steps:
+      - name: deploy to prod
+        run: |
+          echo "deploying to prod"
+          echo "API_URL is '${{ vars.API_URL }}'"
