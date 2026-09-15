@@ -1,2 +1,2 @@
 # Github-actions
-ci cd pipelines using github actions, i will edit first to see how events works
+ci cd pipelines using github actions, from the first step to master it
